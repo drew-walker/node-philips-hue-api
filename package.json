@@ -4,7 +4,8 @@
   "description": "An API wrapper for Philips Hue lights.",
   "main": "index.js",
   "scripts": {
-    "test": "mocha"
+    "test": "mocha",
+    "coveralls": "mocha --require blanket --reporter mocha-lcov-reporter | coveralls"
   },
   "author": "Drew Walker <drew.walker@gmail.com>",
   "license": "MIT",
