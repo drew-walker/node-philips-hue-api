@@ -4,10 +4,31 @@ module.exports = function (request) {
 
         self.apiUrl = apiUrl;
 
-        self.lights = function lights(number) {
+        self.lights = function lights(lightIdentifier, callback) {
             var self = {};
 
-            self.number = number;
+            self.list = function(callback) {
+                request.get({
+                    url: apiUrl + 'lights',
+                    json: true
+                }, function(err, response, body) {
+                    callback(null, body);
+                });
+            };
+
+            if (typeof lightIdentifier === "string") {
+                self.list(function(error, lights) {
+                    var matchingLights = Object.keys(lights).filter(function(lightKey) {
+                        return lights[lightKey].name === lightIdentifier;
+                    });
+
+                    if (matchingLights.length === 0) return callback('Could not find light "' + lightIdentifier + '".', self);
+                    self.number = matchingLights[0];
+                    callback(null, self);
+                });
+            } else {
+                self.number = lightIdentifier;
+            }
 
             self.off = function(callback) {
                 self.state({ "on" : false }, callback);
@@ -45,7 +66,7 @@ module.exports = function (request) {
             self.state = function(state, callback) {
                 if (typeof state === "object") {
                     request.put({
-                        url: apiUrl + 'lights/' + number + '/state',
+                        url: apiUrl + 'lights/' + self.number + '/state',
                         form: JSON.stringify(state)
                     }, function(err, response, body) {
                         if (callback) callback(null, body);
@@ -55,7 +76,7 @@ module.exports = function (request) {
                 }
 
                 request.get({
-                    url: apiUrl + 'lights/' + number,
+                    url: apiUrl + 'lights/' + self.number,
                     json: true
                 }, function(err, response, body) {
                     if (state) state(null, body);
