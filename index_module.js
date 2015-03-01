@@ -32,10 +32,12 @@ module.exports = function (request) {
 
             self.off = function(callback) {
                 self.state({ "on" : false }, callback);
+                return self;
             };
 
             self.on = function(callback) {
                 self.state({ "on" : true }, callback);
+                return self;
             };
 
             self.breathe = function(callback) {

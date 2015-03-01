@@ -41,6 +41,90 @@ describe('Philips Hue node module', function() {
             expect(Hue().lights(1).number).to.equal(1);
         });
 
+        describe('on function', function() {
+            it('should call the state function with { on : true }', function() {
+                var light = Hue('http://localhost/').lights(1);
+
+                sinon.spy(light, "state");
+
+                light.on();
+                expect(light.state.calledOnce).to.equal(true);
+                expect(light.state.firstCall.args[0]).to.deep.equal({ on : true });
+
+                light.state.restore();
+            })
+        });
+
+        describe('off function', function() {
+            it('should call the state function with { on : false }', function() {
+                var light = Hue('http://localhost/').lights(1);
+
+                sinon.spy(light, "state");
+
+                light.off();
+                expect(light.state.calledOnce).to.equal(true);
+                expect(light.state.firstCall.args[0]).to.deep.equal({ on : false });
+
+                light.state.restore();
+            })
+        });
+
+        describe('hue function', function() {
+            it('should call the state function with { hue : [value] }', function() {
+                var light = Hue('http://localhost/').lights(1);
+
+                sinon.spy(light, "state");
+
+                light.hue(101);
+                expect(light.state.calledOnce).to.equal(true);
+                expect(light.state.firstCall.args[0]).to.deep.equal({ hue : 101 });
+
+                light.state.restore();
+            })
+        });
+
+        describe('saturation function', function() {
+            it('should call the state function with { sat : [value] }', function() {
+                var light = Hue('http://localhost/').lights(1);
+
+                sinon.spy(light, "state");
+
+                light.saturation(101);
+                expect(light.state.calledOnce).to.equal(true);
+                expect(light.state.firstCall.args[0]).to.deep.equal({ sat : 101 });
+
+                light.state.restore();
+            })
+        });
+
+        describe('brightness function', function() {
+            it('should call the state function with { bri : [value] }', function() {
+                var light = Hue('http://localhost/').lights(1);
+
+                sinon.spy(light, "state");
+
+                light.brightness(101);
+                expect(light.state.calledOnce).to.equal(true);
+                expect(light.state.firstCall.args[0]).to.deep.equal({ bri : 101 });
+
+                light.state.restore();
+            })
+        });
+
+        describe('colorTemperature function', function() {
+            it('should call the state function with { ct : [value] }', function() {
+                var light = Hue('http://localhost/').lights(1);
+
+                sinon.spy(light, "state");
+
+                light.colorTemperature(500);
+                expect(light.state.calledOnce).to.equal(true);
+                expect(light.state.firstCall.args[0]).to.deep.equal({ ct : 500 });
+
+                light.state.restore();
+            })
+        });
+
         describe('state function', function() {
             it('should make a request with the correct URL and data when state is an object', function() {
                 Hue('http://localhost/').lights(1).state({ "on" : false});
