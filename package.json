@@ -1,5 +1,5 @@
 {
-  "name": "node-philips-hue-api",
+  "name": "philips-hue-api",
   "version": "0.0.1",
   "description": "",
   "main": "index.js",
