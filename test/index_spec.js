@@ -113,6 +113,20 @@ describe('Philips Hue node module', function() {
             })
         });
 
+        describe('breathe function', function() {
+            it('should call the state function with { alert : select }', function() {
+                var light = Hue('http://localhost/').lights(1);
+
+                sinon.spy(light, "state");
+
+                light.breathe();
+                expect(light.state.calledOnce).to.equal(true);
+                expect(light.state.firstCall.args[0]).to.deep.equal({ alert : "select" });
+
+                light.state.restore();
+            })
+        });
+
         describe('brightness function', function() {
             it('should call the state function with { bri : [value] }', function() {
                 var light = Hue('http://localhost/').lights(1);
