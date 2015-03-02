@@ -21,10 +21,10 @@ module.exports = function (request, q) {
             if (typeof lightIdentifier === "string") {
                 self.list(function(error, lights) {
                     var matchingLights = Object.keys(lights).filter(function(lightKey) {
-                        return lights[lightKey].name === lightIdentifier;
+                        return lights[lightKey].name.toLowerCase() === lightIdentifier.toLowerCase();
                     });
 
-                    if (matchingLights.length === 0) return callback('Could not find light "' + lightIdentifier + '".', self);
+                    if (matchingLights.length === 0) console.error('Could not find light "' + lightIdentifier + '".');
                     self.number = matchingLights[0];
                     self.deferred.resolve();
                 });
