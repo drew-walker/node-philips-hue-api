@@ -20,7 +20,8 @@ describe('Philips Hue node module', function() {
                             return {
                                 state: ""
                             }
-                        }
+                        },
+                        then: function() {}
                     }
                 }
             }
@@ -53,7 +54,7 @@ describe('Philips Hue node module', function() {
             expect(Hue().lights()).to.be.an('object');
         });
 
-        it('should have a "number" property that equals the number passed into the function', function() {
+        it('should have a "lightIdentifier" property that equals the number passed into the function', function() {
             expect(Hue().lights(1).lightIdentifier).to.equal(1);
         });
 
@@ -155,7 +156,47 @@ describe('Philips Hue node module', function() {
             })
         });
 
+        describe('list function', function() {
+            it('should make a request with the correct URL and json : true', function() {
+                Hue('http://localhost/').lights().list();
+                expect(requestMock.get.calledOnce).to.equal(true);
+                expect(requestMock.get.firstCall.args[0]).to.deep.equal({ url: 'http://localhost/lights', json: true });
+            });
+
+            it('should call the callback with no error and the request body when the get request succeeds', function() {
+                var callback = sinon.spy();
+                requestMock.get = function(options, response) {
+                    callback(null, "test");
+                };
+                Hue('http://localhost/').lights().list(callback);
+                expect(callback.calledOnce).to.equal(true);
+                expect(callback.firstCall.args[0]).to.equal(null);
+                expect(callback.firstCall.args[1]).to.equal("test");
+            });
+        });
+
         describe('state function', function() {
+            it('should queue up a state change if the promise state is "pending"', function() {
+                var state = { "on" : false};
+                var light = Hue('http://localhost/').lights('Master Bedroom');
+
+                sinon.stub(light.deferred.promise, "inspect").returns({ state: 'pending' });
+                sinon.spy(light.deferred.promise, "then");
+                sinon.stub(light.state, "bind").returns("blah");
+
+                light.state(state);
+
+                expect(light.deferred.promise.then.calledOnce).to.equal(true);
+                expect(light.deferred.promise.then.firstCall.args[0]).to.equal("blah");
+                expect(light.state.bind.calledOnce).to.equal(true);
+                expect(light.state.bind.firstCall.args[0]).to.equal(light);
+                expect(light.state.bind.firstCall.args[1]).to.equal(state);
+
+                light.deferred.promise.inspect.restore();
+                light.deferred.promise.then.restore();
+                light.state.bind.restore();
+            });
+
             it('should make a request with the correct URL and data when state is an object', function() {
                 Hue('http://localhost/').lights(1).state({ "on" : false});
 
@@ -193,6 +234,59 @@ describe('Philips Hue node module', function() {
                 expect(requestMock.put.firstCall.args[0]).to.deep.equal({
                     url: 'http://192.168.0.1/lights/2/state',
                     form: '{"on":true}'
+                });
+            });
+        });
+
+        describe('getState function', function() {
+            it('should queue up a state change if the promise state is "pending"', function() {
+                var callback = function(error, body) {};
+                var light = Hue('http://localhost/').lights('Master Bedroom');
+
+                sinon.stub(light.deferred.promise, "inspect").returns({ state: 'pending' });
+                sinon.spy(light.deferred.promise, "then");
+                sinon.stub(light.getState, "bind").returns("test");
+
+                light.getState(callback);
+
+                expect(light.deferred.promise.then.calledOnce).to.equal(true);
+                expect(light.deferred.promise.then.firstCall.args[0]).to.equal("test");
+                expect(light.getState.bind.calledOnce).to.equal(true);
+                expect(light.getState.bind.firstCall.args[0]).to.equal(light);
+                expect(light.getState.bind.firstCall.args[1]).to.equal(callback);
+
+                light.deferred.promise.inspect.restore();
+                light.deferred.promise.then.restore();
+                light.getState.bind.restore();
+            });
+
+            it('should make a request with the correct URL and json : true', function() {
+                Hue('http://localhost/').lights(1).getState();
+
+                expect(requestMock.get.calledOnce).to.equal(true);
+                expect(requestMock.get.firstCall.args[0]).to.deep.equal({
+                    url: 'http://localhost/lights/1',
+                    json: true
+                });
+            });
+
+            it('should vary the request URL when a different light is called', function() {
+                Hue('http://localhost/').lights(2).getState();
+
+                expect(requestMock.get.calledOnce).to.equal(true);
+                expect(requestMock.get.firstCall.args[0]).to.deep.equal({
+                    url: 'http://localhost/lights/2',
+                    json: true
+                });
+            });
+
+            it('should vary the request URL when a different API url is used', function() {
+                Hue('http://192.168.0.1/').lights(2).getState();
+
+                expect(requestMock.get.calledOnce).to.equal(true);
+                expect(requestMock.get.firstCall.args[0]).to.deep.equal({
+                    url: 'http://192.168.0.1/lights/2',
+                    json: true
                 });
             });
         });

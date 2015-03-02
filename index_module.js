@@ -70,9 +70,7 @@ module.exports = function (request, q) {
 
             self.getState = function(callback) {
                 if (self.deferred.promise.inspect().state === 'pending') {
-                    self.deferred.promise.then(function() {
-                        self.getState(callback);
-                    });
+                    self.deferred.promise.then(self.getState.bind(self, callback));
                 } else {
                     request.get({
                         url: apiUrl + 'lights/' + self.lightIdentifier, json: true
@@ -86,9 +84,7 @@ module.exports = function (request, q) {
 
             self.state = function(state) {
                 if (self.deferred.promise.inspect().state === 'pending') {
-                    self.deferred.promise.then(function() {
-                        self.state(state);
-                    });
+                    self.deferred.promise.then(self.state.bind(self, state));
                 } else {
                     request.put({
                         url: apiUrl + 'lights/' + self.lightIdentifier + '/state',
