@@ -54,7 +54,7 @@ describe('Philips Hue node module', function() {
         });
 
         it('should have a "number" property that equals the number passed into the function', function() {
-            expect(Hue().lights(1).number).to.equal(1);
+            expect(Hue().lights(1).lightIdentifier).to.equal(1);
         });
 
         describe('on function', function() {

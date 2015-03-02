@@ -25,11 +25,11 @@ module.exports = function (request, q) {
                     });
 
                     if (matchingLights.length === 0) console.error('Could not find light "' + lightIdentifier + '".');
-                    self.number = matchingLights[0];
+                    self.lightIdentifier = matchingLights[0];
                     self.deferred.resolve();
                 });
             } else {
-                self.number = lightIdentifier;
+                self.lightIdentifier = lightIdentifier;
                 self.deferred.resolve();
             }
 
@@ -68,25 +68,31 @@ module.exports = function (request, q) {
                 return self;
             };
 
+            self.getState = function(callback) {
+                if (self.deferred.promise.inspect().state === 'pending') {
+                    self.deferred.promise.then(function() {
+                        self.getState(callback);
+                    });
+                } else {
+                    request.get({
+                        url: apiUrl + 'lights/' + self.lightIdentifier, json: true
+                    }, function (err, response, body) {
+                        if (callback) callback(null, body);
+                    });
+
+                    return self;
+                }
+            };
+
             self.state = function(state) {
                 if (self.deferred.promise.inspect().state === 'pending') {
                     self.deferred.promise.then(function() {
                         self.state(state);
                     });
                 } else {
-                    if (typeof state === "object") {
-                        request.put({
-                            url: apiUrl + 'lights/' + self.number + '/state',
-                            form: JSON.stringify(state)
-                        });
-
-                        return self;
-                    }
-
-                    request.get({
-                        url: apiUrl + 'lights/' + self.number, json: true
-                    }, function (err, response, body) {
-                        if (state) state(null, body);
+                    request.put({
+                        url: apiUrl + 'lights/' + self.lightIdentifier + '/state',
+                        form: JSON.stringify(state)
                     });
 
                     return self;
