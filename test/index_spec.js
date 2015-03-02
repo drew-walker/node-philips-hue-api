@@ -11,8 +11,24 @@ describe('Philips Hue node module', function() {
             get: sinon.spy()
         };
 
+        qMock = {
+            defer: function() {
+                return {
+                    resolve: sinon.spy(),
+                    promise: {
+                        inspect: function() {
+                            return {
+                                state: ""
+                            }
+                        }
+                    }
+                }
+            }
+        };
+
         Hue = require('../index_module')(
-            requestMock
+            requestMock,
+            qMock
         );
     });
 

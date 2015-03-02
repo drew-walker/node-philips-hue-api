@@ -1,11 +1,13 @@
-module.exports = function (request) {
+module.exports = function (request, q) {
     return function(apiUrl) {
         var self = {};
 
         self.apiUrl = apiUrl;
 
-        self.lights = function lights(lightIdentifier, callback) {
+        self.lights = function lights(lightIdentifier) {
             var self = {};
+
+            self.deferred = q.defer();
 
             self.list = function(callback) {
                 request.get({
@@ -24,67 +26,71 @@ module.exports = function (request) {
 
                     if (matchingLights.length === 0) return callback('Could not find light "' + lightIdentifier + '".', self);
                     self.number = matchingLights[0];
-                    callback(null, self);
+                    self.deferred.resolve();
                 });
             } else {
                 self.number = lightIdentifier;
+                self.deferred.resolve();
             }
 
-            self.off = function(callback) {
-                self.state({ "on" : false }, callback);
+            self.off = function() {
+                self.state({"on": false});
                 return self;
             };
 
-            self.on = function(callback) {
-                self.state({ "on" : true }, callback);
+            self.on = function() {
+                self.state({ "on" : true });
                 return self;
             };
 
-            self.breathe = function(callback) {
-                self.state({ "alert" : "select" }, callback);
+            self.breathe = function() {
+                self.state({ "alert" : "select" });
                 return self;
             };
 
-            self.hue = function(hue, callback) {
-                self.state({ "hue" : hue }, callback);
+            self.hue = function(hue) {
+                self.state({ "hue" : hue });
                 return self;
             };
 
-            self.saturation = function(saturation, callback) {
-                self.state({ "sat" : saturation }, callback);
+            self.saturation = function(saturation) {
+                self.state({ "sat" : saturation });
                 return self;
             };
 
-            self.brightness = function(brightness, callback) {
-                self.state({ "bri" : brightness }, callback);
+            self.brightness = function(brightness) {
+                self.state({ "bri" : brightness });
                 return self;
             };
 
-            self.colorTemperature = function(colorTemperature, callback) {
-                self.state({ "ct" : colorTemperature}, callback);
+            self.colorTemperature = function(colorTemperature) {
+                self.state({ "ct" : colorTemperature});
                 return self;
             };
 
-            self.state = function(state, callback) {
-                if (typeof state === "object") {
-                    request.put({
-                        url: apiUrl + 'lights/' + self.number + '/state',
-                        form: JSON.stringify(state)
-                    }, function(err, response, body) {
-                        if (callback) callback(null, body);
+            self.state = function(state) {
+                if (self.deferred.promise.inspect().state === 'pending') {
+                    self.deferred.promise.then(function() {
+                        self.state(state);
+                    });
+                } else {
+                    if (typeof state === "object") {
+                        request.put({
+                            url: apiUrl + 'lights/' + self.number + '/state',
+                            form: JSON.stringify(state)
+                        });
+
+                        return self;
+                    }
+
+                    request.get({
+                        url: apiUrl + 'lights/' + self.number, json: true
+                    }, function (err, response, body) {
+                        if (state) state(null, body);
                     });
 
                     return self;
                 }
-
-                request.get({
-                    url: apiUrl + 'lights/' + self.number,
-                    json: true
-                }, function(err, response, body) {
-                    if (state) state(null, body);
-                });
-
-                return self;
             };
 
             return self;
