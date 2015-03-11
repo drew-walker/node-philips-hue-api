@@ -1,6 +1,6 @@
 {
   "name": "philips-hue-api",
-  "version": "0.0.9",
+  "version": "0.1.0",
   "description": "An API wrapper for Philips Hue lights.",
   "main": "index.js",
   "scripts": {
@@ -12,7 +12,8 @@
   "dependencies": {
     "mocha-lcov-reporter": "0.0.2",
     "q": "^1.2.0",
-    "request": "^2.53.0"
+    "request": "^2.53.0",
+    "tough-cookie": "^0.12.1"
   },
   "devDependencies": {
     "blanket": "^1.1.6",
