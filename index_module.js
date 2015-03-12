@@ -105,6 +105,7 @@ module.exports = function (request, url, q) {
                 if (self.deferred.promise.inspect().state === 'pending') {
                     self.deferred.promise.then(self.state.bind(self, state));
                 } else {
+                    console.log("Setting light state to:", state);
                     if (hue.token) {
                         sendMessage(state);
                     } else {
@@ -123,6 +124,7 @@ module.exports = function (request, url, q) {
         function login(options) {
             var deferred = q.defer();
 
+            console.log('Logging in...');
             request({
                 url:"https://www.meethue.com/en-us/api/getaccesstokengivepermission",
                 method:"POST",
@@ -141,6 +143,7 @@ module.exports = function (request, url, q) {
         function getToken(cookies) {
             var deferred = q.defer();
 
+            console.log('Getting authentication token...');
             request({
                 "url" : "https://www.meethue.com/en-us/api/getaccesstokenpost",
                 "followRedirect" : false,
@@ -155,10 +158,12 @@ module.exports = function (request, url, q) {
         }
 
         function getBridge() {
+            var bridgeUrl = "https://www.meethue.com/api/nupnp";
             var deferred = q.defer();
 
+            console.log('Getting bridge details from %s...', bridgeUrl);
             request({
-                url: "https://www.meethue.com/api/nupnp",
+                url: bridgeUrl,
                 json: true
             }, function(error, response, body) {
                 deferred.resolve(body[0]);
@@ -171,6 +176,7 @@ module.exports = function (request, url, q) {
             var deferred = q.defer(),
                 cookies = request.jar();
 
+            console.log('Getting login cookie...');
             request({
                 url : "https://www.meethue.com/en-us/api/gettoken?appid=hueapp&devicename=iPhone+5&deviceid=" + bridgeId,
                 jar : cookies
@@ -187,6 +193,7 @@ module.exports = function (request, url, q) {
             function returnOrGetToken(bridge) {
                 hue.bridge = bridge;
                 if (hue.token) {
+                    console.log('Already authenticated...');
                     deferred.resolve(hue.lights);
                 } else {
                     getAuthenticationDetails(bridge.id)
