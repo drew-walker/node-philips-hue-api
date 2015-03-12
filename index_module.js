@@ -195,16 +195,24 @@ module.exports = function (request, url, q) {
                 "followRedirect" : false,
                 "jar" : cookies
             }, function(error, response) {
-                deferred.resolve(
-                    url.parse(response.headers.location, true)
-                        .query.redirectUrl.replace('phhueapp://sdk/login/', ''));
+                var redirectUrl = url.parse(response.headers.location, true).query.redirectUrl;
+                request({
+                    url: redirectUrl,
+                    followRedirect: false,
+                    headers: {
+                        "accept-language": "en-US,en;q=0.8"
+                    }
+                }, function(err, response) {
+                    var tokenCookie = response.headers['set-cookie'][0].split(";")[0];
+                    deferred.resolve(tokenCookie.substring(tokenCookie.indexOf("=") + 2, tokenCookie.length - 1));
+                });
             });
 
             return deferred.promise;
         }
 
         function getBridge() {
-            var bridgeUrl = "https://www.meethue.com/api/nupnp";
+            var bridgeUrl = "https://www.meethue.com/api/getbridge?token=" + hue.token;
             var deferred = q.defer();
 
             console.log('Getting bridge details from %s...', bridgeUrl);
@@ -212,19 +220,25 @@ module.exports = function (request, url, q) {
                 url: bridgeUrl,
                 json: true
             }, function(error, response, body) {
-                deferred.resolve(body[0]);
+                var id = body.config.mac.replace(/:/g, "");
+                id = id.substring(0, 6) + "fffe" + id.substring(6, 12);
+                var bridge = {
+                    id : id,
+                    internalipaddress : body.config.ipaddress
+                };
+                deferred.resolve(bridge);
             });
 
             return deferred.promise;
         }
 
-        function getAuthenticationDetails(bridgeId) {
+        function getAuthenticationDetails() {
             var deferred = q.defer(),
                 cookies = request.jar();
 
             console.log('Getting login cookie...');
             request({
-                url : "https://www.meethue.com/en-us/api/gettoken?appid=hueapp&devicename=iPhone+5&deviceid=" + bridgeId,
+                url : "https://www.meethue.com/en-us/api/gettoken?appid=myhue&devicename=Chrome&deviceid=Browser",
                 jar : cookies
             }, function() {
                 deferred.resolve({ email:email, password:password, cookies:cookies });
@@ -236,26 +250,28 @@ module.exports = function (request, url, q) {
         hue.authenticate = function() {
             var deferred = q.defer();
 
-            function returnOrGetToken(bridge) {
-                hue.bridge = bridge;
-                if (hue.token) {
-                    console.log('Already authenticated...');
-                    deferred.resolve(hue.lights);
-                } else {
-                    getAuthenticationDetails(bridge.id)
-                        .then(login)
-                        .then(getToken)
-                        .then(function(token) {
-                            hue.token = token;
+            function getTokenAndBridge() {
+                getAuthenticationDetails()
+                    .then(login)
+                    .then(getToken)
+                    .then(function(token) {
+                        hue.token = token;
+                        getBridge().then(function(bridge) {
+                            hue.bridge = bridge;
                             deferred.resolve(hue.lights);
                         });
-                }
+                    });
             }
 
             if (hue.bridge && hue.token) {
                 deferred.resolve(hue.lights);
             } else {
-                getBridge().then(returnOrGetToken);
+                if (hue.token) {
+                    console.log('Already authenticated...');
+                    deferred.resolve(hue.lights);
+                } else {
+                    getTokenAndBridge();
+                }
             }
 
             return deferred.promise;
