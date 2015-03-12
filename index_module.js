@@ -1,16 +1,19 @@
 module.exports = function (request, url, q) {
     return function(username, email, password) {
+        var mode = arguments.length === 1 ? "local" : "remote";
+
         var hue = {};
 
         hue.lights = function lights(lightIdentifier) {
             var self = {};
-            var apiUrl = 'http://' + hue.bridge.internalipaddress + '/api/' + username + '/';
+
+            self.apiUrl = mode === "local" ? username : 'http://' + hue.bridge.internalipaddress + '/api/' + username + '/';
 
             self.deferred = q.defer();
 
             self.list = function(callback) {
                 request.get({
-                    url: apiUrl + 'lights',
+                    url: self.apiUrl + 'lights',
                     json: true
                 }, function(err, response, body) {
                     callback(null, body);
@@ -72,7 +75,7 @@ module.exports = function (request, url, q) {
                     self.deferred.promise.then(self.getState.bind(self, callback));
                 } else {
                     request.get({
-                        url: apiUrl + 'lights/' + self.lightIdentifier, json: true
+                        url: self.apiUrl + 'lights/' + self.lightIdentifier, json: true
                     }, function (err, response, body) {
                         if (callback) callback(null, body);
                     });
@@ -99,19 +102,18 @@ module.exports = function (request, url, q) {
             }
 
             self.state = function(state) {
-                if (hue.token) {
-                    sendMessage(state);
+                if (self.deferred.promise.inspect().state === 'pending') {
+                    self.deferred.promise.then(self.state.bind(self, state));
                 } else {
-                    if (self.deferred.promise.inspect().state === 'pending') {
-                        self.deferred.promise.then(self.state.bind(self, state));
+                    if (hue.token) {
+                        sendMessage(state);
                     } else {
                         request.put({
-                            url: apiUrl + 'lights/' + self.lightIdentifier + '/state',
+                            url: self.apiUrl + 'lights/' + self.lightIdentifier + '/state',
                             form: JSON.stringify(state)
                         });
-
-                        return self;
                     }
+                    return self;
                 }
             };
 
