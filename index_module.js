@@ -45,6 +45,52 @@ module.exports = function (request, url, q) {
                 return self;
             };
 
+            self.color = function(name) {
+                var state = {};
+
+                name = name.toLowerCase();
+
+                state.sat = name.substring(0, 5) === "light" ? 180 : 254;
+
+                name = name.replace("light", "").replace("-","").trim();
+
+                switch (name) {
+                    case "red":
+                        hue = 0;
+                        break;
+                    case "orange":
+                        hue = 8500;
+                        break;
+                    case "yellow":
+                        hue = 17000;
+                        break;
+                    case "green":
+                        hue = 25500;
+                        break;
+                    case "white":
+                        hue = 34000;
+                        break;
+                    case "blue":
+                        hue = 46920;
+                        break;
+                    case "purple":
+                        hue = 48000;
+                        break;
+                    case "magenta":
+                        hue = 54000;
+                        break;
+                    case "pink":
+                        hue = 60000;
+                        break;
+                    default:
+                        hue = 15000;
+                }
+
+                state.hue = hue;
+
+                self.state(state);
+            };
+
             self.breathe = function() {
                 self.state({ "alert" : "select" });
                 return self;
