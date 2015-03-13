@@ -7,16 +7,18 @@ module.exports = function (request, url, q) {
         hue.lights = function lights(lightIdentifier) {
             var self = {};
 
-            self.apiUrl = mode === "local" ? username : 'http://' + hue.bridge.internalipaddress + '/api/' + username + '/';
+            self.apiUrl = mode === "local" ? username : "https://www.meethue.com/api/";
 
             self.deferred = q.defer();
 
             self.list = function(callback) {
+                var url = mode === "local" ? self.apiUrl + "lights" : self.apiUrl + 'getbridge?token=' + hue.token;
+                console.log("Getting light list from %s...", url);
                 request.get({
-                    url: self.apiUrl + 'lights',
+                    url: url,
                     json: true
                 }, function(err, response, body) {
-                    callback(null, body);
+                    callback(null, mode === "local" ? body : body.lights);
                 });
             };
 
