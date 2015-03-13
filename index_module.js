@@ -36,16 +36,19 @@ module.exports = function (request, url, q) {
             }
 
             self.off = function() {
+                console.log('A light has been told to switch off');
                 self.state({"on": false});
                 return self;
             };
 
             self.on = function() {
+                console.log('A light has been told to switch on');
                 self.state({ "on" : true });
                 return self;
             };
 
             self.color = function(name) {
+                console.log('A light has been told to turn %s', name);
                 var state = {};
 
                 name = name.toLowerCase();
@@ -92,26 +95,31 @@ module.exports = function (request, url, q) {
             };
 
             self.breathe = function() {
+                console.log('A light has been told to breathe');
                 self.state({ "alert" : "select" });
                 return self;
             };
 
             self.hue = function(hue) {
+                console.log('A light has been told to change hue');
                 self.state({ "hue" : hue });
                 return self;
             };
 
             self.saturation = function(saturation) {
+                console.log('A light has been told to change saturation');
                 self.state({ "sat" : saturation });
                 return self;
             };
 
             self.brightness = function(brightness) {
+                console.log('A light has been told to change brightness');
                 self.state({ "bri" : brightness });
                 return self;
             };
 
             self.colorTemperature = function(colorTemperature) {
+                console.log('A light has been told to change color temperature');
                 self.state({ "ct" : colorTemperature});
                 return self;
             };
@@ -149,6 +157,7 @@ module.exports = function (request, url, q) {
 
             self.state = function(state) {
                 if (self.deferred.promise.inspect().state === 'pending') {
+                    console.log("Trying to find a matching light...");
                     self.deferred.promise.then(self.state.bind(self, state));
                 } else {
                     console.log("Setting light state to:", state);
