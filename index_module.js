@@ -1,8 +1,29 @@
-module.exports = function (request, url, q) {
+module.exports = function (request, url, q, console, cache) {
+
+    function LocalCache() {
+        var localCacheObj = {};
+
+        return {
+            set: function(key, value, callback) {
+                localCacheObj[key] = value;
+                callback();
+            },
+            get: function(key, callback) {
+                callback(null, localCacheObj[key]);
+            }
+        }
+    }
+
     return function(username, email, password) {
         var mode = arguments.length === 1 ? "local" : "remote";
 
         var hue = {};
+
+        if (cache) {
+            hue.cache = cache;
+        } else {
+            hue.cache = LocalCache();
+        }
 
         hue.lights = function lights(lightIdentifier) {
             var self = {};
@@ -12,14 +33,17 @@ module.exports = function (request, url, q) {
             self.deferred = q.defer();
 
             self.list = function(callback) {
-                var url = mode === "local" ? self.apiUrl + "lights" : self.apiUrl + 'getbridge?token=' + hue.token;
-                console.log("Getting light list from %s...", url);
-                request.get({
-                    url: url,
-                    json: true
-                }, function(err, response, body) {
-                    callback(null, mode === "local" ? body : body.lights);
-                });
+                hue.cache.get('token', function(err, token) {
+                    var url = mode === "local" ? self.apiUrl + "lights" : self.apiUrl + 'getbridge?token=' + token;
+
+                    console.log("Getting light list from %s...", url);
+                    request.get({
+                        url: url,
+                        json: true
+                    }, function(err, response, body) {
+                        callback(null, mode === "local" ? body : body.lights);
+                    });
+                })
             };
 
             if (typeof lightIdentifier === "string") {
@@ -141,19 +165,23 @@ module.exports = function (request, url, q) {
             };
 
             function sendMessage(state) {
-                var clipmessage = {
-                    bridgeId : hue.bridge.id,
-                    clipCommand : {
-                        url: "/api/" + username + "/lights/" + self.lightIdentifier + "/state",
-                        method: "PUT",
-                        body: state
-                    }
-                };
+                hue.cache.get('bridge', function(err, bridge) {
+                    var clipmessage = {
+                        bridgeId : bridge.id,
+                        clipCommand : {
+                            url: "/api/" + username + "/lights/" + self.lightIdentifier + "/state",
+                            method: "PUT",
+                            body: state
+                        }
+                    };
 
-                request.post("https://www.meethue.com/api/sendmessage?token=" + hue.token, {
-                    form: {
-                        clipmessage : JSON.stringify(clipmessage)
-                    }
+                    hue.cache.get('token', function(err, token) {
+                        request.post("https://www.meethue.com/api/sendmessage?token=" + token, {
+                            form: {
+                                clipmessage : JSON.stringify(clipmessage)
+                            }
+                        });
+                    });
                 });
             }
 
@@ -163,15 +191,18 @@ module.exports = function (request, url, q) {
                     self.deferred.promise.then(self.state.bind(self, state));
                 } else {
                     console.log("Setting light state to:", state);
-                    if (hue.token) {
-                        sendMessage(state);
-                    } else {
-                        request.put({
-                            url: self.apiUrl + 'lights/' + self.lightIdentifier + '/state',
-                            form: JSON.stringify(state)
-                        });
-                    }
-                    return self;
+                    hue.cache.get('token', function(err, token) {
+                        if (token) {
+                            sendMessage(state);
+                        } else {
+                            request.put({
+                                url: self.apiUrl + 'lights/' + self.lightIdentifier + '/state',
+                                form: JSON.stringify(state)
+                            });
+                        }
+
+                        return self;
+                    });
                 }
             };
 
@@ -223,21 +254,25 @@ module.exports = function (request, url, q) {
         }
 
         function getBridge() {
-            var bridgeUrl = "https://www.meethue.com/api/getbridge?token=" + hue.token;
             var deferred = q.defer();
 
-            console.log('Getting bridge details from %s...', bridgeUrl);
-            request({
-                url: bridgeUrl,
-                json: true
-            }, function(error, response, body) {
-                var id = body.config.mac.replace(/:/g, "");
-                id = id.substring(0, 6) + "fffe" + id.substring(6, 12);
-                var bridge = {
-                    id : id,
-                    internalipaddress : body.config.ipaddress
-                };
-                deferred.resolve(bridge);
+            hue.cache.get('token', function(err, token) {
+                var bridgeUrl = "https://www.meethue.com/api/getbridge?token=" + token;
+                console.log('Getting bridge details from %s...', bridgeUrl);
+                request({
+                    url: bridgeUrl,
+                    json: true
+                }, function(error, response, body) {
+                    var id = body.config.mac.replace(/:/g, "");
+                    id = id.substring(0, 6) + "fffe" + id.substring(6, 12);
+                    var bridge = {
+                        id : id,
+                        internalipaddress : body.config.ipaddress
+                    };
+                    hue.cache.set('bridge', bridge, function() {
+                        deferred.resolve(bridge);
+                    });
+                });
             });
 
             return deferred.promise;
@@ -266,24 +301,28 @@ module.exports = function (request, url, q) {
                     .then(login)
                     .then(getToken)
                     .then(function(token) {
-                        hue.token = token;
-                        getBridge().then(function(bridge) {
-                            hue.bridge = bridge;
-                            deferred.resolve(hue.lights);
-                        });
+                        hue.cache.set('token', token, function() {
+                            getBridge().then(function(bridge) {
+                                deferred.resolve(hue.lights);
+                            });
+                        })
                     });
             }
 
-            if (hue.bridge && hue.token) {
-                deferred.resolve(hue.lights);
-            } else {
-                if (hue.token) {
-                    console.log('Already authenticated...');
-                    deferred.resolve(hue.lights);
-                } else {
-                    getTokenAndBridge();
-                }
-            }
+            hue.cache.get('token', function(err, token) {
+                hue.cache.get('bridge', function(err, bridge) {
+                    if (bridge && token) {
+                        deferred.resolve(hue.lights);
+                    } else {
+                        if (token) {
+                            console.log('Already authenticated...');
+                            deferred.resolve(hue.lights);
+                        } else {
+                            getTokenAndBridge();
+                        }
+                    }
+                })
+            });
 
             return deferred.promise;
         };

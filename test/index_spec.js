@@ -1,6 +1,6 @@
 var expect = require('chai').expect,
     sinon = require('sinon'),
-    requestMock, urlMock, qMock,
+    requestMock, urlMock, qMock, consoleMock,
     Hue;
 
 describe('Philips Hue node module', function() {
@@ -29,10 +29,15 @@ describe('Philips Hue node module', function() {
             }
         };
 
+        consoleMock = {
+            log: sinon.spy()
+        };
+
         Hue = require('../index_module')(
             requestMock,
             urlMock,
-            qMock
+            qMock,
+            consoleMock
         );
     });
 
